@@ -12,7 +12,14 @@ iso7816_new(uint8_t cla, uint8_t ins, uint8_t p1, uint16_t payload_len)
 	iso7816_apdu_t *apdu;
 	size_t alloc_len;
 
-	alloc_len = sizeof(iso7816_apdu_t) + payload_len + 2; /* le1 le2 */
+	/* Adds space for le1 le2 */
+	alloc_len = offsetof(iso7816_apdu_t, payload) + payload_len + 2;
+	/*
+	 * iso7816_apdu_t may be bigger than needed as it can include padding
+	 * bytes which must be allocated.
+	 */
+	if (alloc_len < sizeof(iso7816_apdu_t))
+		alloc_len = sizeof(iso7816_apdu_t);
 	if ((apdu = calloc(1, alloc_len)) == NULL)
 		return NULL;
 	apdu->alloc_len = alloc_len;
@@ -59,6 +66,5 @@ iso7816_ptr(const iso7816_apdu_t *apdu)
 size_t
 iso7816_len(const iso7816_apdu_t *apdu)
 {
-	return apdu->alloc_len - sizeof(apdu->alloc_len) -
-	    sizeof(apdu->payload_len) - sizeof(apdu->payload_ptr);
+	return apdu->alloc_len - offsetof(iso7816_apdu_t, header);
 }
